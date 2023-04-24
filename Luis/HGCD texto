@@ -1,0 +1,40 @@
+def HGCD(a, b):
+    K = a.parent()  # Si prod, cambiar K por el cuerpo. 
+    dega = a.degree()
+    degb = b.degree()
+    m = (dega / 2).ceil()
+    if degb < m:
+        return matrix(K, 2, [1, 0, 0, 1])
+    a0 = a.shift(-m)
+    b0 = b.shift(-m)
+    R = HGCD(a0, b0)
+    r11 = R[0][0]
+    r12 = R[0][1]
+    r21 = R[1][0]
+    r22 = R[1][1]
+    d = (r11 * r22 - r12 * r21)
+    a1 = (d * (a * r22 - b * r21))
+    b1 = (d * (b * r11 - a * r12))
+    if b1.degree() < m:
+        return R
+    qt, d = a1.quo_rem(b1)
+    c = b1
+    l = c.degree()
+    k = 2 * m - l
+    if l-m >= (a0.degree()/2).ceil():
+        print("FALSE 1")
+    c0 = c.shift(-k)
+    d0 = d.shift(-k)
+    if c0.degree() != 2*(l-m):
+        print("FALSE 2")
+    S = HGCD(c0, d0)
+    # Q = prod(prod(R, [qt, K(1), K(1), K(0)]), S)
+    Q = R * matrix(K, 2, [qt, 1, 1, 0]) * S
+    return Q
+
+
+K.<x>=PolynomialRing(QQ)
+f = K.random_element(20)
+g = K.random_element(15)  # Si g tiene grado entre 14 y 19, no termina: FALSE 1. (Grado 20 no se contempla).
+print("R = ",HGCD(f,g))
+%time show(euclid_gcd(f,g))
