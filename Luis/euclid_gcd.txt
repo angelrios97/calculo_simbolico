@@ -1,0 +1,6 @@
+def euclid_gcd(f, g):  # Calcula gcd(f,g) con el algoritmo de Euclides.
+    r0 = f
+    r1 = g
+    while r1 != 0:
+        r0, r1 = r1, r0%r1
+    return r0

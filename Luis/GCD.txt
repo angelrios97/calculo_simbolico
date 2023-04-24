@@ -1,0 +1,19 @@
+def MIGCD(f,g):  # Calcula el gcd(f,g) aprovechando el HGCD.
+    K = f.parent()
+    a = f  # No queremos que modifique la entrada.
+    b = g
+    if a % b == 0:  # Si f es divisible por g, GCD(f,g) = g.
+        return b
+    R = HGCD(a, b)  # Matriz R del HGCD.
+    r11 = R[0][0]  # Guardamos las componentes de la matriz R.
+    r12 = R[0][1]
+    r21 = R[1][0]
+    r22 = R[1][1]
+    d = (r11 * r22 - r12 * r21)  # det(R)
+    b0 = (d * (a * r22 - b * r12))  # R^-1*(f,g)'
+    b1 = (d * (b * r11 - a * r21))
+    rem = b0 % b1  # Resto del cociente de b0 entre b1.
+    if rem == 0:  # Si b0 es divisible por b1, GCD(f,g) = b1.
+        return b1
+    else:  # Si no, calculamos recursivamente el GCD con el resto.
+        return MIGCD(b1, rem)

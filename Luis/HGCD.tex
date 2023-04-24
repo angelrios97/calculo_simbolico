@@ -1,0 +1,280 @@
+\documentclass[10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathrsfs}
+\usepackage{graphicx}
+\usepackage{enumerate}
+\usepackage{ragged2e}
+\usepackage{listings}
+\usepackage{multirow}
+\lstdefinelanguage{Sage}[]{Python}
+{morekeywords={False,degree,shift,degree,parent,matrix,ceil,random_element,PolynomialRing,GF,\%time,quo_rem,True},sensitive=true}
+\usepackage[spanish,onelanguage]{algorithm2e}
+%\setlength{\parindent}{0em}
+\usepackage[left=3.5cm,right=3.5cm,top=2cm,bottom=2.5cm]{geometry}
+\usepackage{tikz}
+\usepackage{tikz-cd}
+\theoremstyle{definition}
+\newtheorem{ejer}{Ejercicio}
+\newtheorem*{sol}{Solución}
+\title{Computación Simbólica\\ \large Half-GCD vs. Euclides}
+\author{Ángel Ríos San Nicolás}
+\date{31 de diciembre de 2020}
+\renewcommand{\refname}{Bibliografía}
+\begin{document}
+\maketitle
+%\lstinputlisting[language=Python]{}
+\section{Introducción}
+ Vamos a comparar la eficacia en la práctica de dos algoritmos para el cálculo del máximo común divisor de polinomios con coeficientes en un cuerpo: el algoritmo de Euclides y un método que aprovecha el Half-GCD. Sabemos que en $\mathbb{Q}[X]$ estos algoritmos no evitan que crezcan los coeficientes de los polinomios en los cálculos intermedios. Como estamos interesados en compararlos en número de operaciones, tomaremos los polinomios con coeficientes en un cuerpo finito, donde no crecen los coeficientes, el coste de las operaciones es el mismo y podemos compararlos fijándonos en el tiempo de ejecución. En particular, fijaremos el anillo $\mathbb{F}_{101}[X]$ de polinomios con coeficientes en el cuerpo finito de $101$ elementos. El código lo hemos programado en Sage y está recogido en el anexo.
+
+\section{Algoritmos del máximo común divisor de polinomios}
+\subsection{Algoritmo recursivo mediante Half-GCD}
+Si denotamos $\textbf{div}(f,g)$ al cociente de la división euclídea de $f$ por $g$, podemos escribir el algoritmo del Half-GCD como sigue. 
+\begin{center}
+\begin{algorithm}[H]
+\SetAlgoLined\DontPrintSemicolon
+\KwIn{$f,g\in \mathbb{K}[X]$\text{ con } $\deg(f)>\deg(g)$}
+\KwOut{$\text{HGCD}(f,g)=R\in\mathscr{M}_2(R[X])$ tal que $R\begin{pmatrix}f\\ g\end{pmatrix}=\begin{pmatrix}f'\\ g'\end{pmatrix}$ con $\deg(f')>\left\lceil\frac{\deg(f)}{2}\right\rceil>\deg(g')$}
+ Inicialización: $m=\deg(f)$\;
+ \If{$\deg(g) < \left\lceil\frac{m}{2}\right\rceil$}{
+ \Return $I$\;
+  }
+  $a_0 = \textbf{div}(f,x^m)$;
+  $b_0 = \textbf{div}(g,x^m)$\;
+  $R =\text{HGCD}(a_0,b_0)$\;
+  $\begin{pmatrix}a'\\ b'\end{pmatrix}=R\begin{pmatrix}f\\ g\end{pmatrix}$\;
+  \If{$\deg(b')<m$}{
+  \Return $R$\;
+  }
+  $q=\textbf{div}(a',b')$\;
+  $d=a'\mod b'$\;
+  $c=b'$\;
+  $l=\deg(c)$;
+  $k=2m-l$\;
+  $c_0=\textbf{div}(c',x^k)$; 
+  $d_0=\textbf{div}(d',x^k)$\;
+  $S=\text{HGCD}(c_0,d_0)$\;
+  \Return $R\cdot \begin{pmatrix}q & 1\\ 1 & 0
+  \end{pmatrix}\cdot S$
+\end{algorithm}\end{center}
+El Half-GCD permite, multiplicando por la inversa, calcular dos restos consecutivos del algoritmo de Euclides y además con la propiedad de calculamos el primer resto cuyo grado es menor que la mitad del de $f$.
+Aprovechando el algoritmo anterior, calculamos el máximo común divisor.
+\begin{center}
+\begin{algorithm}[H]
+\SetAlgoLined\DontPrintSemicolon
+\KwIn{$f,g\in \mathbb{K}[X]$}
+\KwOut{$\gcd(f,g)$}
+\If{$f \mod g = 0$}{
+\Return $g$\;
+}
+$R=\text{HGCD}(f,g)$\;
+$\begin{pmatrix}b_0\\ b_1\end{pmatrix}=R^{-1}\begin{pmatrix}f\\ g\end{pmatrix}$\;
+\If{$b_0 \mod b_1 \neq 0$}{
+ \Return $b_1$\;}
+ \Else{
+ $\gcd(b_1
+ ,b_0\mod b_1)$}
+\end{algorithm}\end{center}
+
+\subsection{Algoritmo de Euclides}
+El algoritmo de Euclides clásico para el cálculo del máximo común divisor es el siguiente.
+\begin{center}
+\begin{algorithm}[H]
+\SetAlgoLined\DontPrintSemicolon
+\KwIn{$f,g\in \mathbb{K}[X]$}
+\KwOut{$\gcd(f,g)$}
+ Inicialización: $r_0 = f;$ $r_1 = g$\;
+ \While{$r_1 \neq 0$}{
+ $r_0 = r_1$\;
+ $r_1 = r_0 \mod r_1$
+  }
+ \Return $r_0$
+\end{algorithm}\end{center}
+\section{Comparación de los métodos en $\mathbb{F}_{101}[X]$}
+Como en el Half-GCD tenemos $\deg(f)>\deg(g)$, para probar los algoritmos fijamos un grado para $f$ y vamos aumentando el de $g$.
+\subsection{Polinomios pseudoaleatorios}
+Si escogemos $f$ y $g$ de grados fijos aleatoriamente con distribución uniforme en $\mathbb{F}_{101}[X]$, es de esperar que sean coprimos. Vamos a ver que, en la práctica el algoritmo del Half-GCD es eficiente en la práctica para grados muy grandes.
+
+Empezamos con grado $100$ para $f$ y aumentamos el grado de $g$. Observamos que tarda más en terminar el algoritmo de del Half-GCD.
+\begin{lstlisting}[language=Sage]
+K.<x> = PolynomialRing(GF(101))
+f = K.random_element(100)
+g = K.random_element(20)
+%time print(euclid_gcd(f,g))
+%time print(MIGCD(f,g))
+\end{lstlisting}
+\begin{lstlisting}[language=Sage,literate={µ}{$\mu$}1]
+4
+CPU times: user 243 µs, sys: 0 ns, total: 243 µs
+Wall time: 209 µs
+4
+CPU times: user 2.61 ms, sys: 0 ns, total: 2.61 ms
+Wall time: 2.58 ms
+\end{lstlisting}
+\begin{lstlisting}[language=Sage]
+K.<x> = PolynomialRing(GF(101))
+f = K.random_element(100)
+g = K.random_element(80)
+%time print(euclid_gcd(f,g))
+%time print(MIGCD(f,g))
+\end{lstlisting}
+\begin{lstlisting}[language=Sage,literate={µ}{$\mu$}1]
+8
+CPU times: user 290 µs, sys: 70 µs, total: 360 µs
+Wall time: 364 µs
+8
+CPU times: user 11.9 ms, sys: 0 ns, total: 11.9 ms
+Wall time: 11.3 ms
+\end{lstlisting}
+\begin{lstlisting}[language=Sage]
+K.<x> = PolynomialRing(GF(101))
+f = K.random_element(100)
+g = K.random_element(99)
+%time print(euclid_gcd(f,g))
+%time print(MIGCD(f,g))
+\end{lstlisting}
+\begin{lstlisting}[language=Sage,literate={µ}{$\mu$}1]
+89
+CPU times: user 262 µs, sys: 1e+03 ns, total: 263 µs
+Wall time: 266 µs
+89
+CPU times: user 12.8 ms, sys: 2 µs, total: 12.8 ms
+Wall time: 12.7 ms
+\end{lstlisting}
+Aumentamos el grado de $f$ a $1000$ y seguimos teniendo la misma tendencia, el algoritmo de Euclides es mucho más eficiente y menos sensible al cambio.
+\begin{lstlisting}[language=Sage]
+K.<x> = PolynomialRing(GF(101))
+f = K.random_element(1000)
+g = K.random_element(20)
+%time print(euclid_gcd(f,g))
+%time print(MIGCD(f,g))
+\end{lstlisting}
+\begin{lstlisting}[language=Sage,literate={µ}{$\mu$}1]
+87
+CPU times: user 280 µs, sys: 68 µs, total: 348 µs
+Wall time: 260 µs
+87
+CPU times: user 2.47 ms, sys: 0 ns, total: 2.47 ms
+Wall time: 2.47 ms
+\end{lstlisting}
+\begin{lstlisting}[language=Sage]
+K.<x> = PolynomialRing(GF(101))
+f = K.random_element(1000)
+g = K.random_element(800)
+%time print(euclid_gcd(f,g))
+%time print(MIGCD(f,g))
+\end{lstlisting}
+\begin{lstlisting}[language=Sage,literate={µ}{$\mu$}1]
+49
+CPU times: user 3.01 ms, sys: 0 ns, total: 3.01 ms
+Wall time: 2.98 ms
+49
+CPU times: user 108 ms, sys: 0 ns, total: 108 ms
+Wall time: 106 ms
+\end{lstlisting}
+\begin{lstlisting}[language=Sage]
+K.<x> = PolynomialRing(GF(101))
+f = K.random_element(1000)
+g = K.random_element(999)
+%time print(euclid_gcd(f,g))
+%time print(MIGCD(f,g))
+\end{lstlisting}
+\begin{lstlisting}[language=Sage,literate={µ}{$\mu$}1]
+39
+CPU times: user 4.99 ms, sys: 2 µs, total: 4.99 ms
+Wall time: 4.81 ms
+39
+CPU times: user 130 ms, sys: 3 µs, total: 130 ms
+Wall time: 130 ms
+\end{lstlisting}
+Si el grado de $f$ es $10^5$, si el grado de $g$ es, por ejemplo $9000$ o $5\cdot 10^4$, sigue siendo mejor el algoritmo de Euclides, pero si el grado es $6\cdot 10^4$ el algoritmo que utiliza el Half-GCD es más rápido.
+\begin{lstlisting}[language=Sage]
+K.<x> = PolynomialRing(GF(101))
+f = K.random_element(100000)
+g = K.random_element(50000)
+%time print(euclid_gcd(f,g))
+%time print(MIGCD(f,g))
+\end{lstlisting}
+\begin{lstlisting}[language=Sage,literate={µ}{$\mu$}1]
+52
+CPU times: user 6.26 s, sys: 0 ns, total: 6.26 s
+Wall time: 6.26 s
+52
+CPU times: user 6.72 s, sys: 0 ns, total: 6.72 s
+Wall time: 6.72 s
+\end{lstlisting}
+\begin{lstlisting}[language=Sage]
+K.<x> = PolynomialRing(GF(101))
+f = K.random_element(100000)
+g = K.random_element(60000)
+%time print(euclid_gcd(f,g))
+%time print(MIGCD(f,g))
+\end{lstlisting}
+\begin{lstlisting}[language=Sage,literate={µ}{$\mu$}1]
+71
+CPU times: user 9.09 s, sys: 0 ns, total: 9.09 s
+Wall time: 9.09 s
+71
+CPU times: user 8.1 s, sys: 0 ns, total: 8.1 s
+Wall time: 8.09 s
+\end{lstlisting}
+\begin{lstlisting}[language=Sage]
+K.<x> = PolynomialRing(GF(101))
+f = K.random_element(100000)
+g = K.random_element(99999)
+%time print(euclid_gcd(f,g))
+%time print(MIGCD(f,g))
+\end{lstlisting}
+\begin{lstlisting}[language=Sage,literate={µ}{$\mu$}1]
+58
+CPU times: user 25.6 s, sys: 0 ns, total: 25.6 s
+Wall time: 25.6 s
+58
+CPU times: user 13.9 s, sys: 0 ns, total: 13.9 s
+Wall time: 13.9 s
+\end{lstlisting}
+Con esto observamos que, en este caso, con esta implementación, el algoritmo que utiliza el Half-GCD solo sería más eficiente para grados muy grandes, mayores que $10^5$ para $f$ y $5\cdot 10^4$ para $g$, con los que las ejecuciones pueden tardan más de 8 segundos. Observamos también que se acentúa la mejoría con el grado ya que pasamos de una diferencia de $1$ segundo a una de $12$ segundos.
+\subsection{Máximo común divisor de grado al menos $\left\lceil\frac{\deg(f)}{2}\right\rceil$}
+Si tomamos $f,g\in\mathbb{F}_{101}[X]$ con $\deg(f)=n$ de manera que $\deg(g)<n$ y $\gcd(f,g)\geq \left\lceil \frac{n}{2}\right\rceil$, entonces, claramente no son coprimos. Es de esperar que en este caso el Half-GCD sea más eficiente en la práctica porque precisamente está diseñado para calcular de manera más rápida hasta el resto de grado menor que $\frac{n}{2}$ recursivamente y verificar que es el máximo común divisor.
+
+\section{Mejora: Generalización a grados cualesquiera}
+Una mejora funcional que se puede hacer al algoritmo del GCD con el Half-GCD permite que se pueda aplicar para polinomios $f$ y $g$ del mismo grado. La idea es hacer una división euclídea con la que construimos los polinomios $q$ y $r$ tales que
+$$f=gq+r\qquad\text{ con }\deg(r)<\deg(g)$$
+y, como $\gcd(f,g)=\gcd(g,r)$, podemos aplicar el algoritmo a $g$ y $r=f\mod g$. El método quedaría entonces:
+
+    \begin{algorithm}[H]
+    \DontPrintSemicolon
+    \KwIn{$f,g\in \mathbb{K}[X]$}
+    \KwOut{$\gcd(f,g)$}
+    \If{$\deg(f)=\deg(g)$}{
+    $r=f\mod g$\;
+    \Return $\gcd^*(g,r)$
+    }
+    \If{$\deg(g)>\deg(f)$}{
+    \Return $\gcd^*(g,f)$\;
+    }\Return $\gcd^*(f,g)$\;
+    
+    \end{algorithm}
+donde $\gcd^*$ es el máximo común divisor calculado con el algoritmo anterior que aprovecha el Half-GCD. La implementación del algoritmo es trivial.
+
+\newpage
+\section*{ANEXO: Código en SAGE}
+\subsection*{Producto de matrices $2\times 2$ como listas}
+\lstinputlisting[language=Python]{prod.txt}
+\subsection*{Half-GCD}
+\lstinputlisting[language=Sage]{HGCD.txt}
+\newpage
+\subsection*{GCD con Half-GCD}
+\lstinputlisting[language=Python]{GCD.txt}
+\subsection*{Algoritmo de Euclides}
+\lstinputlisting[language=Python]{euclid_gcd.txt}
+\newpage
+\begin{thebibliography}{}
+\bibitem{}THULL, Klaus, CHEE K. Yap, 1990. \textit{A unified approach to HGCD Algorithms for Polynomials and integers.}
+
+\end{thebibliography}
+\end{document}
+

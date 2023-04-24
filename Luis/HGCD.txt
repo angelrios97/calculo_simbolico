@@ -1,0 +1,29 @@
+def HGCD(a, b):  # Calcula el Half-GCD de los polinomios a, b.
+    K = a.parent()  # Anillo de polinomios de a y b.
+    dega = a.degree() # Grados de a y b.
+    degb = b.degree()
+    m = (dega / 2).ceil()
+    if degb < m:  # Si el grado de b es menor que m, es la identidad.
+        return matrix(K, 2, [1, 0, 0, 1])
+    a0 = a.shift(-m)  # Cocientes de a y b por x^m.
+    b0 = b.shift(-m)
+    R = HGCD(a0, b0)  # Calculamos el HGCD recursivamente.
+    r11 = R[0][0]  # Guardamos las componentes de la matriz R.
+    r12 = R[0][1]
+    r21 = R[1][0]
+    r22 = R[1][1]
+    d = (r11 * r22 - r12 * r21)  # R^-1*(a,b)'.
+    a1 = (d * (a * r22 - b * r12))
+    b1 = (d * (b * r11 - a * r21))
+    if b1.degree() < m:  # Si el grado de b1 es menor que m, devuelve R.
+        return R
+    qt, d = a1.quo_rem(b1)  # Si no, hacemos un paso de Euclides.
+    c = b1  
+    l = c.degree()
+    k = 2 * m - l  # Tomamos k para que la recursion funcione.
+    c0 = c.shift(-k)
+    d0 = d.shift(-k)
+    S = HGCD(c0, d0)  # Calculamos el HGCD recurisvamente.
+    RM = matrix(K, 2, prod(R, matrix(K, 2, [qt, K(1), K(1), K(0)])))
+    Q = matrix(K, 2, prod(RM, S))  # Matriz R * [qt, 1, 1, 0] * S.
+    return Q
